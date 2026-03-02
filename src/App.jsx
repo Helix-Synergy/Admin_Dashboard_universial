@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import Dashboard from './Dashboard';
-import CodeItDashboard from './CodeIt/Dashboard';
+import CodeItDashboard from './CodeIt/Dashboard.jsx';
 import WebsiteSelector from './WebsiteSelector';
+import AuraDashboard from './Aura/AuraDashBoard.jsx';
+
 import './index.css';
 import { Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import JournalsDashboard from './Helix_Open_Access_Journals/JournalsDashboard.jsx';
 
 function App() {
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
@@ -97,8 +101,14 @@ function App() {
   if (selectedWebsite === 'CodeIt') {
     return <CodeItDashboard onBack={() => setSelectedWebsite(null)} />;
   }
-
-  return <Dashboard selectedWebsite={selectedWebsite} onBack={() => setSelectedWebsite(null)} />;
+if (selectedWebsite === 'Aura') {
+  return <AuraDashboard onBack={() => setSelectedWebsite(null)} />;
 }
 
+  if (selectedWebsite === 'Journals') {
+    return <JournalsDashboard onBack={() => setSelectedWebsite(null)} />;
+  }
+  return <Dashboard selectedWebsite={selectedWebsite} onBack={() => setSelectedWebsite(null)} />;
+
+}
 export default App;

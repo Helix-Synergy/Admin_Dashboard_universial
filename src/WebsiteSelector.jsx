@@ -18,6 +18,30 @@ const WebsiteSelector = ({ onSelect }) => {
             color: 'from-emerald-500 to-teal-600',
             active: true,
             description: 'Coding education and project platform.'
+        },
+         {
+            id: 'Aura',
+            name: 'Aura',
+            url: 'aura.com', // Placeholder URL
+    color: 'from-emerald-500 to-red-600',
+
+
+
+            active: true,
+            description: 'Manage Aura business consulting submissions and dashboards'
+        },
+            {
+            id: 'Journals',
+            name: 'Helix_Journals',
+            url: 'journals.com', // Placeholder URL
+  color: 'from-purple-500 to-pink-600',
+
+
+
+
+            active: true,
+            description: 'Manage Helix Journals manuscript submissions, reviews, and admin dashboards'
+
         }
     ];
 
