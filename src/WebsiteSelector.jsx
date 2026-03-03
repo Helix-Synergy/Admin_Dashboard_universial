@@ -18,6 +18,38 @@ const WebsiteSelector = ({ onSelect }) => {
             color: 'from-emerald-500 to-teal-600',
             active: true,
             description: 'Coding education and project platform.'
+        },
+        {
+            id: 'Digigrow',
+            name: 'Digigrow',
+            url: 'digigrow.com', // Placeholder URL
+            color: 'from-purple-500 to-pink-600',
+            active: true,
+            description: 'Digital growth and marketing agency.'
+        },
+        {
+            id: 'Channel8',
+            name: 'Channel 8',
+            url: 'channel8.com', // Placeholder URL
+            color: 'from-orange-500 to-red-600',
+            active: true,
+            description: 'Video streaming and contact platform.'
+        },
+        {
+            id: 'Aura',
+            name: 'Aura',
+            url: 'aura.com', // Placeholder URL
+            color: 'from-emerald-500 to-red-600',
+            active: true,
+            description: 'Manage Aura business consulting submissions and dashboards.'
+        },
+        {
+            id: 'Journals',
+            name: 'Helix Journals',
+            url: 'journals.com', // Placeholder URL
+            color: 'from-purple-500 to-pink-600',
+            active: true,
+            description: 'Manage Helix Journals manuscript submissions, reviews, and admin dashboards.'
         }
     ];
 

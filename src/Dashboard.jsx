@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     LayoutDashboard,
     MessageSquare,
+    Mic,
     GraduationCap,
     Briefcase,
     Users,
@@ -22,7 +23,8 @@ import {
     X,
     Eye,
     CreditCard,
-    ArrowLeft
+    ArrowLeft,
+    Trash2
 } from 'lucide-react';
 import RegistrationModal from './components/RegistrationModal';
 
@@ -48,7 +50,7 @@ const StatCard = ({ label, value, icon: Icon, colorTheme }) => (
 );
 
 // Updated DetailsModal to show more payment info
-const DetailsModal = ({ item, onClose, theme }) => {
+const DetailsModal = ({ item, onClose, theme, apiBaseUrl }) => {
     if (!item) return null;
 
     // Filter out internal MongoDB keys
@@ -77,17 +79,36 @@ const DetailsModal = ({ item, onClose, theme }) => {
                                     {/* Handle Dates specifically */}
                                     {key.toLowerCase().includes('date') || key === 'createdAt' ? (
                                         new Date(value).toLocaleString()
-                                    ) : key === 'paymentScreenshot' || key === 'profileImage' ? (
+                                    ) : key === 'videoPath' ? (
+                                        value ? (
+                                            <div className="mt-2 text-sm">
+                                                <video controls className="w-full max-w-sm rounded-lg border border-slate-200 bg-black">
+                                                    <source src={`${apiBaseUrl.replace('/api', '')}/${value.replace(/\\/g, '/')}`} type="video/mp4" />
+                                                    Your browser does not support the video tag.
+                                                </video>
+                                                <div className="mt-1">
+                                                    <a
+                                                        href={`${apiBaseUrl.replace('/api', '')}/${value.replace(/\\/g, '/')}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-500 hover:underline flex items-center gap-1"
+                                                    >
+                                                        <LinkIcon size={12} /> Open in new tab
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        ) : <span className="text-slate-400 italic">No video</span>
+                                    ) : key === 'paymentScreenshot' || key === 'profileImage' || key === 'thumbnailUrl' ? (
                                         value ? (
                                             <div className="mt-2">
                                                 <a
-                                                    href={`${API_BASE.replace('/api', '')}/${value.replace(/\\/g, '/')}`}
+                                                    href={`${apiBaseUrl.replace('/api', '')}/${value.replace(/\\/g, '/')}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="inline-block relative group overflow-hidden rounded-lg border border-slate-200 hover:border-blue-500 transition-colors"
                                                 >
                                                     <img
-                                                        src={`${API_BASE.replace('/api', '')}/${value.replace(/\\/g, '/')}`}
+                                                        src={`${apiBaseUrl.replace('/api', '')}/${value.replace(/\\/g, '/')}`}
                                                         alt="Payment/Profile"
                                                         className="w-32 h-32 object-cover transition-transform group-hover:scale-105"
                                                     />
@@ -120,7 +141,7 @@ const DetailsModal = ({ item, onClose, theme }) => {
     );
 };
 
-export default function Dashboard({ selectedWebsite, onBack }) {
+export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
     const [activeTab, setActiveTab] = useState('contact');
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -128,6 +149,9 @@ export default function Dashboard({ selectedWebsite, onBack }) {
     const [selectedItem, setSelectedItem] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [syncing, setSyncing] = useState(false);
+
+    // Use passed prop or fallback (though prop should always be passed now)
+    const API_URL = apiBaseUrl || API_BASE;
 
     const themes = {
         blue: { bg: 'bg-blue-600', bgLight: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200', gradient: 'from-blue-500 to-cyan-500' },
@@ -137,14 +161,31 @@ export default function Dashboard({ selectedWebsite, onBack }) {
         rose: { bg: 'bg-rose-600', bgLight: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200', gradient: 'from-rose-500 to-pink-500' },
     };
 
-    const tabs = [
+    let tabs = [
         { id: 'contact', label: 'Messages', icon: MessageSquare, endpoint: '/contact', theme: themes.blue },
         { id: 'register-student', label: 'Students', icon: GraduationCap, endpoint: '/register-student', theme: themes.emerald },
         { id: 'register-faculty', label: 'Faculty', icon: Briefcase, endpoint: '/register-faculty', theme: themes.violet },
         { id: 'become-member', label: 'Members', icon: Users, endpoint: '/become-member', theme: themes.amber },
         { id: 'collaborate', label: 'Collab', icon: Handshake, endpoint: '/collaborate', theme: themes.rose },
-        { id: 'payments', label: 'Payments', icon: CreditCard, endpoint: '/payment/all', theme: themes.emerald }, // Payments Tab
+        { id: 'payments', label: 'Payments', icon: CreditCard, endpoint: '/payment/all', theme: themes.emerald },
     ];
+
+    // Filter tabs for Digigrow
+    if (selectedWebsite === 'Digigrow') {
+        tabs = [
+            { id: 'contact', label: 'Messages', icon: MessageSquare, endpoint: '/contact', theme: themes.blue },
+            { id: 'collaborate', label: 'Collab', icon: Handshake, endpoint: '/collaborate', theme: themes.rose },
+        ];
+    }
+
+    // Filter tabs for Channel8
+    if (selectedWebsite === 'Channel8') {
+        tabs = [
+            { id: 'contact', label: 'Messages', icon: MessageSquare, endpoint: '/contact', theme: themes.blue },
+            { id: 'videos', label: 'Videos', icon: Eye, endpoint: '/videos', theme: themes.rose },
+            { id: 'podcasts', label: 'Podcasts', icon: Mic, endpoint: '/podcasts', theme: themes.violet },
+        ];
+    }
 
     const currentTheme = tabs.find(t => t.id === activeTab)?.theme || themes.blue;
 
@@ -152,8 +193,8 @@ export default function Dashboard({ selectedWebsite, onBack }) {
         setLoading(true);
         try {
             const endpoint = tabs.find(t => t.id === activeTab).endpoint;
-            // Append source filter
-            const res = await fetch(`${API_BASE}${endpoint}?source=${selectedWebsite}`);
+            // Append source filter (though Digigrow backend might ignore it, keeping it safe)
+            const res = await fetch(`${API_URL}${endpoint}?source=${selectedWebsite}`);
             if (!res.ok) throw new Error('Failed to fetch');
             const json = await res.json();
             // Handle different response structures (Array vs { success, payments })
@@ -217,14 +258,134 @@ export default function Dashboard({ selectedWebsite, onBack }) {
 
     const filteredData = data.filter(item => {
         const searchString = searchTerm.toLowerCase();
-        const name = (item.firstName ? `${item.firstName} ${item.lastName || ''}` : item.name || '').toLowerCase();
+        const name = (item.firstName ? `${item.firstName} ${item.lastName || ''}` : item.name || item.title || '').toLowerCase(); // Added item.title for podcasts
         const email = (item.email || '').toLowerCase();
         return name.includes(searchString) || email.includes(searchString);
     });
 
+    // Podcast Modal Component
+    const PodcastModal = ({ isOpen, onClose, apiBaseUrl, onSuccess }) => {
+        const [formData, setFormData] = useState({
+            title: '',
+            description: '',
+            duration: '',
+            date: '',
+            audioUrl: ''
+        });
+        const [thumbnail, setThumbnail] = useState(null);
+        const [isSubmitting, setIsSubmitting] = useState(false);
+
+        if (!isOpen) return null;
+
+        const handleChange = (e) => {
+            setFormData({ ...formData, [e.target.name]: e.target.value });
+        };
+
+        const handleFileChange = (e) => {
+            if (e.target.files && e.target.files[0]) {
+                setThumbnail(e.target.files[0]);
+            }
+        };
+
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            setIsSubmitting(true);
+            const data = new FormData();
+            Object.keys(formData).forEach(key => data.append(key, formData[key]));
+            if (thumbnail) data.append('thumbnail', thumbnail);
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/podcasts`, {
+                    method: 'POST',
+                    body: data
+                });
+                if (response.ok) {
+                    onSuccess();
+                    onClose();
+                } else {
+                    alert('Failed to create podcast');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error creating podcast');
+            } finally {
+                setIsSubmitting(false);
+            }
+        };
+
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-8 animate-scale-up">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-bold text-slate-800">New Podcast Episode</h3>
+                        <button onClick={onClose}><X size={24} className="text-slate-400 hover:text-slate-600" /></button>
+                    </div>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                            <input required name="title" value={formData.title} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Episode Title" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                            <textarea name="description" value={formData.description} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" rows="3" placeholder="Brief description..." />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Duration</label>
+                                <input name="duration" value={formData.duration} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g. 45:10" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Date Display</label>
+                                <input name="date" value={formData.date} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g. Oct 22" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Video/Audio URL</label>
+                            <input name="audioUrl" value={formData.audioUrl} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" placeholder="https://..." />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Thumbnail</label>
+                            <input type="file" onChange={handleFileChange} accept="image/*" className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" />
+                        </div>
+                        <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50">
+                            {isSubmitting ? 'Creating...' : 'Create Episode'}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    };
+
+    const handleDelete = async (id, e) => {
+        e.stopPropagation();
+        if (window.confirm('Are you sure you want to delete this podcast?')) {
+            try {
+                const response = await fetch(`${API_URL}/podcasts/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    setData(data.filter(item => item._id !== id));
+                    // Optional: Show success toast
+                } else {
+                    alert('Failed to delete podcast');
+                }
+            } catch (error) {
+                console.error('Error deleting podcast:', error);
+                alert('Error deleting podcast');
+            }
+        }
+    };
+
     return (
         <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
-            <RegistrationModal isOpen={isModalOpen} selectedWebsite={selectedWebsite} onClose={() => { setIsModalOpen(false); fetchData(); }} />
+            {activeTab !== 'podcasts' && (
+                <RegistrationModal
+                    isOpen={isModalOpen}
+                    selectedWebsite={selectedWebsite}
+                    onClose={() => { setIsModalOpen(false); fetchData(); }}
+                />
+            )}
+            {activeTab === 'podcasts' && <PodcastModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} apiBaseUrl={API_URL} onSuccess={fetchData} />}
 
             {/* CSS Animation for Table Rows & Modal */}
             <style>{`
@@ -247,6 +408,7 @@ export default function Dashboard({ selectedWebsite, onBack }) {
                     item={selectedItem}
                     onClose={() => setSelectedItem(null)}
                     theme={currentTheme}
+                    apiBaseUrl={API_URL}
                 />
             )}
 
@@ -328,14 +490,16 @@ export default function Dashboard({ selectedWebsite, onBack }) {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {/* New Registration Button */}
-                        <button
-                            onClick={() => setIsModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-95 font-medium"
-                        >
-                            <Plus size={18} />
-                            <span>New Registration</span>
-                        </button>
+                        {/* New Registration/Podcast Button */}
+                        {(selectedWebsite !== 'Channel8' || activeTab === 'podcasts') && selectedWebsite !== 'Digigrow' && (
+                            <button
+                                onClick={() => setIsModalOpen(true)}
+                                className={`flex items-center gap-2 px-4 py-2.5 text-white rounded-xl shadow-lg transition-all active:scale-95 font-medium ${activeTab === 'podcasts' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/30' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'}`}
+                            >
+                                <Plus size={18} />
+                                <span>{activeTab === 'podcasts' ? 'New Episode' : 'New Registration'}</span>
+                            </button>
+                        )}
 
                         {/* Sync Button (visible only for payments tab) */}
                         {activeTab === 'payments' && (
@@ -443,7 +607,7 @@ export default function Dashboard({ selectedWebsite, onBack }) {
                                                         </div>
                                                         <div>
                                                             <div className="font-bold text-slate-800 text-base">
-                                                                {item.firstName ? `${item.firstName} ${item.lastName || ''}` : item.name}
+                                                                {item.firstName ? `${item.firstName} ${item.lastName || ''}` : item.name || item.title}
                                                             </div>
                                                             <div className="text-sm text-slate-500 flex flex-col gap-1 mt-1">
                                                                 <span className="flex items-center gap-1.5"><Mail size={14} className="text-slate-400" /> {item.email}</span>
@@ -484,8 +648,8 @@ export default function Dashboard({ selectedWebsite, onBack }) {
                                                                         <Building2 size={14} className="text-slate-400 shrink-0" /> {item.university}
                                                                     </div>
                                                                 )}
-                                                                {!item.university && item.message && (
-                                                                    <p className="text-sm text-slate-500 line-clamp-2 italic">"{item.message}"</p>
+                                                                {!item.university && (item.message || item.description) && (
+                                                                    <p className="text-sm text-slate-500 line-clamp-2 italic">"{item.message || item.description}"</p>
                                                                 )}
                                                             </>
                                                         )}
@@ -500,12 +664,23 @@ export default function Dashboard({ selectedWebsite, onBack }) {
                                                 </td>
 
                                                 <td className="px-6 py-5 text-right">
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
-                                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentTheme.bgLight} ${currentTheme.text} hover:shadow-md border ${currentTheme.border} whitespace-nowrap`}
-                                                    >
-                                                        View Details
-                                                    </button>
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
+                                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${currentTheme.bgLight} ${currentTheme.text} hover:shadow-md border ${currentTheme.border} whitespace-nowrap`}
+                                                        >
+                                                            View Details
+                                                        </button>
+                                                        {activeTab === 'podcasts' && (
+                                                            <button
+                                                                onClick={(e) => handleDelete(item._id, e)}
+                                                                className="px-3 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 transition-all shadow-sm"
+                                                                title="Delete Podcast"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))

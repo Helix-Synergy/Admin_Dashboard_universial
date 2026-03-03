@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Dashboard from './Dashboard';
 import CodeItDashboard from './CodeIt/Dashboard';
 import WebsiteSelector from './WebsiteSelector';
+import AuraDashboard from './Aura/AuraDashBoard';
+import JournalsDashboard from './Helix_Open_Access_Journals/JournalsDashboard';
 import './index.css';
 import { Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -98,7 +100,45 @@ function App() {
     return <CodeItDashboard onBack={() => setSelectedWebsite(null)} />;
   }
 
-  return <Dashboard selectedWebsite={selectedWebsite} onBack={() => setSelectedWebsite(null)} />;
+  if (selectedWebsite === 'Digigrow') {
+    const digigrowApi = import.meta.env.VITE_DIGIGROW_API_BASE || 'http://localhost:5001/api';
+    return (
+      <Dashboard
+        selectedWebsite={selectedWebsite}
+        onBack={() => setSelectedWebsite(null)}
+        apiBaseUrl={digigrowApi}
+      />
+    );
+  }
+
+  if (selectedWebsite === 'Channel8') {
+    const channel8Api = import.meta.env.VITE_CHANNEL8_API_BASE || 'http://localhost:5002/api';
+    return (
+      <Dashboard
+        selectedWebsite={selectedWebsite}
+        onBack={() => setSelectedWebsite(null)}
+        apiBaseUrl={channel8Api}
+      />
+    );
+  }
+
+  if (selectedWebsite === 'Aura') {
+    return <AuraDashboard onBack={() => setSelectedWebsite(null)} />;
+  }
+
+  if (selectedWebsite === 'Journals') {
+    return <JournalsDashboard onBack={() => setSelectedWebsite(null)} />;
+  }
+
+  // Peptides (Default)
+  const peptidesApi = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+  return (
+    <Dashboard
+      selectedWebsite={selectedWebsite}
+      onBack={() => setSelectedWebsite(null)}
+      apiBaseUrl={peptidesApi}
+    />
+  );
 }
 
 export default App;
