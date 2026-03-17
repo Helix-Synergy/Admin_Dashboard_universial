@@ -270,9 +270,11 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
             description: '',
             duration: '',
             date: '',
-            audioUrl: ''
+            audioUrl: '',
+            videoUrl: ''
         });
         const [thumbnail, setThumbnail] = useState(null);
+        const [videoFile, setVideoFile] = useState(null);
         const [isSubmitting, setIsSubmitting] = useState(false);
 
         if (!isOpen) return null;
@@ -283,7 +285,11 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
 
         const handleFileChange = (e) => {
             if (e.target.files && e.target.files[0]) {
-                setThumbnail(e.target.files[0]);
+                if (e.target.name === 'thumbnail') {
+                    setThumbnail(e.target.files[0]);
+                } else if (e.target.name === 'video') {
+                    setVideoFile(e.target.files[0]);
+                }
             }
         };
 
@@ -293,6 +299,7 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
             const data = new FormData();
             Object.keys(formData).forEach(key => data.append(key, formData[key]));
             if (thumbnail) data.append('thumbnail', thumbnail);
+            if (videoFile) data.append('video', videoFile);
 
             try {
                 const response = await fetch(`${apiBaseUrl}/podcasts`, {
@@ -344,8 +351,12 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                             <input name="audioUrl" value={formData.audioUrl} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" placeholder="https://..." />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Thumbnail</label>
-                            <input type="file" onChange={handleFileChange} accept="image/*" className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" />
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Thumbnail Image</label>
+                            <input type="file" name="thumbnail" onChange={handleFileChange} accept="image/*" className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Video File (Optional)</label>
+                            <input type="file" name="video" onChange={handleFileChange} accept="video/*" className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" />
                         </div>
                         <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50">
                             {isSubmitting ? 'Creating...' : 'Create Episode'}
