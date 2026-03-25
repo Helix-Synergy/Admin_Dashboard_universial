@@ -3,6 +3,14 @@ import { Globe, ArrowRight, Layout, PlusCircle } from 'lucide-react';
 
 const WebsiteSelector = ({ onSelect }) => {
     const websites = [
+         {
+  id: 'HelixSynergyCrop',
+  name: 'Helix Synergy Crop',
+  url: 'helixsynergycrop.com', // Main website URL
+  color: 'from-green-500 to-blue-600', // Example gradient for styling
+  active: true,
+  description: 'Helix Synergy Crop main portal managing all subdomains, services, contacts, and admin workflows.'
+},
         {
             id: 'Peptides',
             name: 'Peptides Knowledge Park',
@@ -50,7 +58,16 @@ const WebsiteSelector = ({ onSelect }) => {
             color: 'from-purple-500 to-pink-600',
             active: true,
             description: 'Manage Helix Journals manuscript submissions, reviews, and admin dashboards.'
-        }
+        },
+         {
+            id: 'EVolve',
+            name: 'E-Volve',
+            url: 'evolve.com', // Placeholder URL
+            color: 'from-purple-500 to-pink-600',
+            active: true,
+description: 'Manage Helix Magazine E-Volve digital publications, articles, editions, contributors, and admin content workflows.'
+        },
+   
     ];
 
     return (

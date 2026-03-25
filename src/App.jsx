@@ -4,6 +4,8 @@ import CodeItDashboard from './CodeIt/Dashboard';
 import WebsiteSelector from './WebsiteSelector';
 import AuraDashboard from './Aura/AuraDashBoard';
 import JournalsDashboard from './Helix_Open_Access_Journals/JournalsDashboard';
+import EVolveDashboard from './EVolve/EVolveDashBoard';
+import HelixSyngeryCrop from "./HelixSyngeryCrop/ContactsList"
 import './index.css';
 import { Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -129,7 +131,12 @@ function App() {
   if (selectedWebsite === 'Journals') {
     return <JournalsDashboard onBack={() => setSelectedWebsite(null)} />;
   }
-
+  if (selectedWebsite === 'EVolve') {
+    return <EVolveDashboard onBack={() => setSelectedWebsite(null)} />;
+  }
+   if (selectedWebsite === 'HelixSynergyCrop') {
+    return <HelixSyngeryCrop onBack={() => setSelectedWebsite(null)} />;
+  }
   // Peptides (Default)
   const peptidesApi = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
   return (
