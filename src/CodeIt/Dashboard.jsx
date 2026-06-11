@@ -103,53 +103,56 @@ const totalReceivedAmount =
     : 0;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-6">
-      <div className="max-w-7xl mx-auto flex gap-6">
+    <div className="min-h-screen flex bg-slate-900 text-white font-sans">
+      
+      {/* ---------------- SIDEBAR ---------------- */}
+      <aside className="w-20 md:w-64 bg-slate-950 border-r border-slate-800 p-4 flex flex-col z-20 shadow-xl overflow-y-auto">
+        <button
+          onClick={onBack}
+          className="mb-8 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl flex items-center gap-3 transition-colors text-slate-300 w-full"
+        >
+          <ArrowLeft size={18} /> <span className="hidden md:inline font-medium">Switch Website</span>
+        </button>
 
-        {/* ---------------- SIDEBAR ---------------- */}
-        <aside className="w-16 md:w-64 bg-slate-800 rounded-2xl p-4 space-y-3">
-              <button
-              onClick={onBack}
-              className="px-4 py-2 bg-slate-800 rounded-lg flex items-center gap-2"
-            >
-              <ArrowLeft size={16} /> Switch Website
-            </button>
+        <div className="space-y-2 flex-1">
           {modules.map((module) => (
-            
             <button
               key={module.key}
               onClick={() => fetchData(module)}
-              className={`flex items-center gap-3 px-3 py-3 rounded-xl w-full transition ${
+              className={`flex items-center gap-4 px-4 py-3 w-full rounded-xl transition-all duration-200 ${
                 activeModule?.key === module.key
-                  ? "bg-emerald-600"
-                  : "bg-slate-700 hover:bg-slate-600"
+                  ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
               }`}
+              title={module.label}
             >
-              <module.icon size={20} />
-              <span className="hidden md:inline">{module.label}</span>
+              <module.icon size={20} className={activeModule?.key === module.key ? "text-emerald-400" : "text-slate-400"} />
+              <span className="hidden md:inline font-semibold">{module.label}</span>
             </button>
           ))}
-        </aside>
+        </div>
+      </aside>
 
-        {/* ---------------- MAIN ---------------- */}
-        <main className="flex-1">
-
-          {/* Header */}
-          <header className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center">
-                <Code />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">Code It Admin</h1>
-                <p className="text-slate-400 text-sm">
-                  {activeModule ? activeModule.label : "Admin Dashboard"}
-                </p>
-              </div>
-            </div>
-
+      {/* ---------------- MAIN CONTENT ---------------- */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
         
-          </header>
+        {/* HEADER */}
+        <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-8 py-6 flex justify-between items-center z-10 sticky top-0">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <Code className="text-white" size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Code It Admin</h1>
+              <p className="text-emerald-400/80 text-sm font-medium">
+                {activeModule ? activeModule.label : "Admin Dashboard"}
+              </p>
+            </div>
+          </div>
+        </header>
+
+        {/* SCROLLABLE BODY */}
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
 
           {/* Search + Refresh + Count */}
           {activeModule && (
@@ -315,8 +318,8 @@ const totalReceivedAmount =
              Welcome Admin! Select a module from sidebar
             </p>
           )}
+        </div>
         </main>
-      </div>
 
       {/* ---------------- DETAILS MODAL ---------------- */}
       {selectedItem && (
