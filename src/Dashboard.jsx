@@ -119,6 +119,19 @@ const DetailsModal = ({ item, onClose, theme, apiBaseUrl }) => {
                                                 <div className="text-xs text-slate-400 mt-1">Click to view full size</div>
                                             </div>
                                         ) : <span className="text-slate-400 italic">No file</span>
+                                    ) : key === 'pdfFile' ? (
+                                        value ? (
+                                            <div className="mt-2">
+                                                <a
+                                                    href={`${apiBaseUrl.replace('/api', '')}/${value.replace(/\\/g, '/')}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors border border-blue-200"
+                                                >
+                                                    <FileText size={16} /> View PDF Document
+                                                </a>
+                                            </div>
+                                        ) : <span className="text-slate-400 italic">No PDF uploaded</span>
                                     ) : (
                                         value ? value.toString() : <span className="text-slate-400 italic">N/A</span>
                                     )}
@@ -168,6 +181,8 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
         { id: 'become-member', label: 'Members', icon: Users, endpoint: '/become-member', theme: themes.amber },
         { id: 'collaborate', label: 'Collab', icon: Handshake, endpoint: '/collaborate', theme: themes.rose },
         { id: 'payments', label: 'Payments', icon: CreditCard, endpoint: '/payment/all', theme: themes.emerald },
+        { id: 'webinar-abstracts', label: 'Webinar Abstracts', icon: FileText, endpoint: '/abstract-submission', sourceOverride: 'SmartMaterials', theme: themes.amber },
+        { id: 'webinar-contacts', label: 'Webinar Contacts', icon: MessageSquare, endpoint: '/contact', sourceOverride: 'SmartMaterials', theme: themes.blue },
     ];
 
     // Filter tabs for Digigrow
@@ -192,9 +207,11 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const endpoint = tabs.find(t => t.id === activeTab).endpoint;
-            // Append source filter (though Digigrow backend might ignore it, keeping it safe)
-            const res = await fetch(`${API_URL}${endpoint}?source=${selectedWebsite}`);
+            const activeTabObj = tabs.find(t => t.id === activeTab);
+            const endpoint = activeTabObj.endpoint;
+            const sourceParam = activeTabObj.sourceOverride || selectedWebsite;
+            // Append source filter
+            const res = await fetch(`${API_URL}${endpoint}?source=${sourceParam}`);
             if (!res.ok) throw new Error('Failed to fetch');
             const json = await res.json();
             // Handle different response structures (Array vs { success, payments })

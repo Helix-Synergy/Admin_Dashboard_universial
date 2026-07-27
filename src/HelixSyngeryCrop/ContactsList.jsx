@@ -12,7 +12,7 @@ const ContactsList = ({ onBack }) => {
   const fetchContacts = async () => {
     try {
       const response = await axios.get(
-        "https://helixsynregycropbackend.onrender.com/api/contacts"
+        import.meta.env.VITE_HELIX_SYNERGY_API_BASE || "https://helixsynregycropbackend.onrender.com/api/contacts"
       );
 
       // Use the date/time from the API as-is
