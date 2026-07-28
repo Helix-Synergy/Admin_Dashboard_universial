@@ -162,6 +162,10 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
     const [selectedItem, setSelectedItem] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [syncing, setSyncing] = useState(false);
+    
+    // Nested Webinar States
+    const [selectedWebinar, setSelectedWebinar] = useState(null);
+    const [webinarSubTab, setWebinarSubTab] = useState('contacts');
 
     // Use passed prop or fallback (though prop should always be passed now)
     const API_URL = apiBaseUrl || API_BASE;
@@ -181,8 +185,7 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
         { id: 'become-member', label: 'Members', icon: Users, endpoint: '/become-member', theme: themes.amber },
         { id: 'collaborate', label: 'Collab', icon: Handshake, endpoint: '/collaborate', theme: themes.rose },
         { id: 'payments', label: 'Payments', icon: CreditCard, endpoint: '/payment/all', theme: themes.emerald },
-        { id: 'webinar-abstracts', label: 'Webinar Abstracts', icon: FileText, endpoint: '/abstract-submission', sourceOverride: 'SmartMaterials', theme: themes.amber },
-        { id: 'webinar-contacts', label: 'Webinar Contacts', icon: MessageSquare, endpoint: '/contact', sourceOverride: 'SmartMaterials', theme: themes.blue },
+        { id: 'webinars', label: 'Webinars', icon: Calendar, theme: themes.rose },
     ];
 
     // Filter tabs for Digigrow
@@ -205,12 +208,25 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
     const currentTheme = tabs.find(t => t.id === activeTab)?.theme || themes.blue;
 
     const fetchData = async () => {
+        if (activeTab === 'webinars' && !selectedWebinar) {
+            setData([]);
+            return;
+        }
+
         setLoading(true);
         try {
-            const activeTabObj = tabs.find(t => t.id === activeTab);
-            const endpoint = activeTabObj.endpoint;
-            const sourceParam = activeTabObj.sourceOverride || selectedWebsite;
-            // Append source filter
+            let endpoint = '';
+            let sourceParam = selectedWebsite;
+            
+            if (activeTab === 'webinars' && selectedWebinar) {
+                endpoint = webinarSubTab === 'abstracts' ? '/abstract-submission' : '/contact';
+                sourceParam = selectedWebinar;
+            } else {
+                const activeTabConfig = tabs.find(t => t.id === activeTab);
+                endpoint = activeTabConfig.endpoint;
+                sourceParam = activeTabConfig.sourceOverride || selectedWebsite;
+            }
+
             const res = await fetch(`${API_URL}${endpoint}?source=${sourceParam}`);
             if (!res.ok) throw new Error('Failed to fetch');
             const json = await res.json();
@@ -266,11 +282,14 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
 
     useEffect(() => {
         fetchData();
-    }, [activeTab, selectedWebsite]); // Add selectedWebsite dependency
+    }, [activeTab, selectedWebsite, selectedWebinar, webinarSubTab]);
 
     useEffect(() => {
         // Reset selection when switching tabs
         setSelectedItem(null);
+        if (activeTab !== 'webinars') {
+            setSelectedWebinar(null);
+        }
     }, [activeTab]);
 
     const filteredData = data.filter(item => {
@@ -509,12 +528,25 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                 <header className="px-8 py-6 flex items-center justify-between shrink-0">
                     <div>
                         <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                            {tabs.find(t => t.id === activeTab)?.label}
+                            {activeTab === 'webinars' && selectedWebinar ? (
+                                <>
+                                    <button onClick={() => setSelectedWebinar(null)} className="p-2 -ml-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
+                                        <ArrowLeft size={20} />
+                                    </button>
+                                    {selectedWebinar === 'SmartMaterials' ? 'Smart Materials 2026' : selectedWebinar}
+                                </>
+                            ) : (
+                                tabs.find(t => t.id === activeTab)?.label
+                            )}
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${currentTheme.bgLight} ${currentTheme.text} border ${currentTheme.border}`}>
                                 Overview
                             </span>
                         </h2>
-                        <p className="text-slate-500 text-sm mt-1">Manage and view your {tabs.find(t => t.id === activeTab)?.label.toLowerCase()} entries.</p>
+                        <p className="text-slate-500 text-sm mt-1">
+                            {activeTab === 'webinars' && selectedWebinar 
+                                ? `Manage ${webinarSubTab} for this webinar.` 
+                                : `Manage and view your ${tabs.find(t => t.id === activeTab)?.label.toLowerCase()} entries.`}
+                        </p>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -563,32 +595,77 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
 
                 {/* Scrollable Content Area */}
                 <div className="p-8 pt-0 overflow-y-auto flex-1 custom-scrollbar">
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-                        <StatCard
-                            label="Total Records"
-                            value={data.length}
-                            icon={tabs.find(t => t.id === activeTab)?.icon}
-                            colorTheme={currentTheme}
-                        />
-
-                        {/* Revenue Card - Only visible on Payments Tab */}
-                        {activeTab === 'payments' && (
-                            <StatCard
-                                label="Total Revenue"
-                                value={`₹${data.reduce((sum, item) => sum + (item.payment_status === 'Paid' ? (Number(item.amount) || 0) : 0), 0).toLocaleString('en-IN')}`}
-                                icon={CreditCard}
-                                colorTheme={themes.emerald}
-                            />
-                        )}
-
-                        {/* Placeholder for future stats - makes UI look complete */}
-                        {activeTab !== 'payments' && (
-                            <div className="bg-white/60 p-6 rounded-2xl border border-slate-200/60 flex items-center justify-center text-slate-400 italic text-sm border-dashed">
-                                Detailed Analytics coming soon...
+                    {activeTab === 'webinars' && !selectedWebinar ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                            <div 
+                                onClick={() => setSelectedWebinar('SmartMaterials')}
+                                className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group"
+                            >
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-rose-500/30">
+                                    <Calendar size={32} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-slate-800 mb-2">Smart Materials 2026</h3>
+                                <p className="text-slate-500 mb-6">Manage all abstract submissions and contact messages for the Smart Materials conference.</p>
+                                <div className="flex items-center text-rose-600 font-semibold group-hover:translate-x-2 transition-transform">
+                                    Manage Webinar <ArrowUpRight className="ml-2" size={20} />
+                                </div>
                             </div>
-                        )}
-                    </div>
+                            
+                            {/* Placeholder for future webinars */}
+                            <div className="bg-slate-50 rounded-3xl p-8 border border-dashed border-slate-300 flex flex-col items-center justify-center text-center">
+                                <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 mb-4">
+                                    <Plus size={24} />
+                                </div>
+                                <h3 className="text-lg font-semibold text-slate-600 mb-1">Host New Webinar</h3>
+                                <p className="text-sm text-slate-400">Connect a new webinar frontend to this dashboard.</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Specific Webinar Sub-Tabs */}
+                            {activeTab === 'webinars' && selectedWebinar && (
+                                <div className="flex gap-4 mb-8 border-b border-slate-200 pb-4">
+                                    <button 
+                                        onClick={() => setWebinarSubTab('contacts')}
+                                        className={`px-6 py-2.5 rounded-full font-semibold transition-all ${webinarSubTab === 'contacts' ? 'bg-amber-100 text-amber-700 shadow-sm' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'}`}
+                                    >
+                                        <div className="flex items-center gap-2"><Mail size={16} /> Contact Messages</div>
+                                    </button>
+                                    <button 
+                                        onClick={() => setWebinarSubTab('abstracts')}
+                                        className={`px-6 py-2.5 rounded-full font-semibold transition-all ${webinarSubTab === 'abstracts' ? 'bg-rose-100 text-rose-700 shadow-sm' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'}`}
+                                    >
+                                        <div className="flex items-center gap-2"><FileText size={16} /> Abstract Submissions</div>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Stats Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+                                <StatCard
+                                    label="Total Records"
+                                    value={data.length}
+                                    icon={activeTab === 'webinars' ? (webinarSubTab === 'contacts' ? Mail : FileText) : tabs.find(t => t.id === activeTab)?.icon}
+                                    colorTheme={activeTab === 'webinars' ? (webinarSubTab === 'contacts' ? themes.amber : themes.rose) : currentTheme}
+                                />
+
+                                {/* Revenue Card - Only visible on Payments Tab */}
+                                {activeTab === 'payments' && (
+                                    <StatCard
+                                        label="Total Revenue"
+                                        value={`₹${data.reduce((sum, item) => sum + (item.payment_status === 'Paid' ? (Number(item.amount) || 0) : 0), 0).toLocaleString('en-IN')}`}
+                                        icon={CreditCard}
+                                        colorTheme={themes.emerald}
+                                    />
+                                )}
+
+                                {/* Placeholder for future stats - makes UI look complete */}
+                                {activeTab !== 'payments' && (
+                                    <div className="bg-white/60 p-6 rounded-2xl border border-slate-200/60 flex items-center justify-center text-slate-400 italic text-sm border-dashed">
+                                        Detailed Analytics coming soon...
+                                    </div>
+                                )}
+                            </div>
 
                     {/* Data Table Container */}
                     <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden flex flex-col">
@@ -717,6 +794,8 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                             </table>
                         </div>
                     </div>
+                    </>
+                    )}
                 </div>
             </main>
         </div>
