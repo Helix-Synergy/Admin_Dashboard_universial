@@ -83,12 +83,12 @@ const DetailsModal = ({ item, onClose, theme, apiBaseUrl }) => {
                                         value ? (
                                             <div className="mt-2 text-sm">
                                                 <video controls className="w-full max-w-sm rounded-lg border border-slate-200 bg-black">
-                                                    <source src={`${apiBaseUrl.replace('/api', '')}/${value.replace(/\\/g, '/')}`} type="video/mp4" />
+                                                    <source src={`${apiBaseUrl.replace(/\/api$/, '')}/${value.replace(/\\/g, '/')}`} type="video/mp4" />
                                                     Your browser does not support the video tag.
                                                 </video>
                                                 <div className="mt-1">
                                                     <a
-                                                        href={`${apiBaseUrl.replace('/api', '')}/${value.replace(/\\/g, '/')}`}
+                                                        href={`${apiBaseUrl.replace(/\/api$/, '')}/${value.replace(/\\/g, '/')}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="text-blue-500 hover:underline flex items-center gap-1"
@@ -102,13 +102,13 @@ const DetailsModal = ({ item, onClose, theme, apiBaseUrl }) => {
                                         value ? (
                                             <div className="mt-2">
                                                 <a
-                                                    href={`${apiBaseUrl.replace('/api', '')}/${value.replace(/\\/g, '/')}`}
+                                                    href={`${apiBaseUrl.replace(/\/api$/, '')}/${value.replace(/\\/g, '/')}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="inline-block relative group overflow-hidden rounded-lg border border-slate-200 hover:border-blue-500 transition-colors"
                                                 >
                                                     <img
-                                                        src={`${apiBaseUrl.replace('/api', '')}/${value.replace(/\\/g, '/')}`}
+                                                        src={`${apiBaseUrl.replace(/\/api$/, '')}/${value.replace(/\\/g, '/')}`}
                                                         alt="Payment/Profile"
                                                         className="w-32 h-32 object-cover transition-transform group-hover:scale-105"
                                                     />
@@ -123,7 +123,7 @@ const DetailsModal = ({ item, onClose, theme, apiBaseUrl }) => {
                                         value ? (
                                             <div className="mt-2">
                                                 <a
-                                                    href={`${apiBaseUrl.replace('/api', '')}/${value.replace(/\\/g, '/')}`}
+                                                    href={`${apiBaseUrl.replace(/\/api$/, '')}/${value.replace(/\\/g, '/')}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors border border-blue-200"
