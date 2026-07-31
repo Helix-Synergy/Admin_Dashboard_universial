@@ -219,7 +219,9 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
             let sourceParam = selectedWebsite;
             
             if (activeTab === 'webinars' && selectedWebinar) {
-                endpoint = webinarSubTab === 'abstracts' ? '/abstract-submission' : '/contact';
+                if (webinarSubTab === 'abstracts') endpoint = '/abstract-submission';
+                else if (webinarSubTab === 'payments') endpoint = '/webinar-registration';
+                else endpoint = '/contact';
                 sourceParam = selectedWebinar;
             } else {
                 const activeTabConfig = tabs.find(t => t.id === activeTab);
@@ -636,6 +638,12 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                                         className={`px-6 py-2.5 rounded-full font-semibold transition-all ${webinarSubTab === 'abstracts' ? 'bg-rose-100 text-rose-700 shadow-sm' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'}`}
                                     >
                                         <div className="flex items-center gap-2"><FileText size={16} /> Abstract Submissions</div>
+                                    </button>
+                                    <button 
+                                        onClick={() => setWebinarSubTab('payments')}
+                                        className={`px-6 py-2.5 rounded-full font-semibold transition-all ${webinarSubTab === 'payments' ? 'bg-emerald-100 text-emerald-700 shadow-sm' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'}`}
+                                    >
+                                        <div className="flex items-center gap-2"><CreditCard size={16} /> Payments</div>
                                     </button>
                                 </div>
                             )}
