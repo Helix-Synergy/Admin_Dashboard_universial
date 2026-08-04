@@ -24,7 +24,8 @@ import {
     Eye,
     CreditCard,
     ArrowLeft,
-    Trash2
+    Trash2,
+    Download
 } from 'lucide-react';
 import RegistrationModal from './components/RegistrationModal';
 
@@ -186,6 +187,7 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
         { id: 'collaborate', label: 'Collab', icon: Handshake, endpoint: '/collaborate', theme: themes.rose },
         { id: 'payments', label: 'Payments', icon: CreditCard, endpoint: '/payment/all', theme: themes.emerald },
         { id: 'webinars', label: 'Webinars', icon: Calendar, theme: themes.rose },
+        { id: 'workshops', label: 'Workshops', icon: Building2, endpoint: '/workshop-registration', theme: themes.violet },
     ];
 
     // Filter tabs for Digigrow
@@ -240,6 +242,11 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
             setData([]);
         }
         setLoading(false);
+    };
+
+    const handleExportExcel = () => {
+        const url = `${API_URL}/workshop-registration/export?source=${selectedWebsite}`;
+        window.open(url, '_blank');
     };
 
     const handleSync = async () => {
@@ -572,6 +579,17 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                             >
                                 <RefreshCw size={18} className={syncing ? 'animate-spin text-blue-500' : 'text-slate-400'} />
                                 <span>{syncing ? 'Syncing...' : 'Sync Status'}</span>
+                            </button>
+                        )}
+
+                        {/* Export Excel Button (visible only for workshops tab) */}
+                        {activeTab === 'workshops' && (
+                            <button
+                                onClick={handleExportExcel}
+                                className={`flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl shadow-lg hover:bg-green-700 transition-all font-medium shadow-green-500/30`}
+                            >
+                                <Download size={18} />
+                                <span>Export Excel</span>
                             </button>
                         )}
 
