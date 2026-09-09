@@ -28,6 +28,7 @@ import {
     Download
 } from 'lucide-react';
 import RegistrationModal from './components/RegistrationModal';
+import * as XLSX from 'xlsx';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
 
@@ -164,6 +165,10 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [syncing, setSyncing] = useState(false);
     
+    // Excel Export State for Messages
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+    
     // Nested Webinar States
     const [selectedWebinar, setSelectedWebinar] = useState(null);
     const [webinarSubTab, setWebinarSubTab] = useState('contacts');
@@ -188,6 +193,7 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
         { id: 'payments', label: 'Payments', icon: CreditCard, endpoint: '/payment/all', theme: themes.emerald },
         { id: 'webinars', label: 'Webinars', icon: Calendar, theme: themes.rose },
         { id: 'workshops', label: 'Workshops', icon: Building2, endpoint: '/workshop-registration', theme: themes.violet },
+        { id: 'dynamic-services', label: 'Dynamic Services', icon: FileText, endpoint: '/dynamic-services', theme: themes.blue },
     ];
 
     // Filter tabs for Digigrow
@@ -248,6 +254,44 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
         const url = `${API_URL}/workshop-registration/export?source=${selectedWebsite}`;
         window.open(url, '_blank');
     };
+
+    const handleExportMessagesExcel = () => {
+        let filteredMessages = data;
+
+        if (fromDate) {
+            const from = new Date(fromDate);
+            from.setHours(0, 0, 0, 0);
+            filteredMessages = filteredMessages.filter(msg => new Date(msg.createdAt) >= from);
+        }
+
+        if (toDate) {
+            const to = new Date(toDate);
+            to.setHours(23, 59, 59, 999);
+            filteredMessages = filteredMessages.filter(msg => new Date(msg.createdAt) <= to);
+        }
+
+        if (filteredMessages.length === 0) {
+            alert('No messages found for the selected date range.');
+            return;
+        }
+
+        const exportData = filteredMessages.map(msg => ({
+            Name: msg.firstName ? `${msg.firstName} ${msg.lastName || ''}` : msg.name || '',
+            Email: msg.email || '',
+            Phone: msg.phone || '',
+            Subject: msg.subject || '',
+            Message: msg.message || '',
+            Date: new Date(msg.createdAt).toLocaleString()
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Messages");
+        
+        const fileNamePrefix = activeTab === 'webinars' && selectedWebinar ? selectedWebinar : selectedWebsite;
+        XLSX.writeFile(workbook, `Messages_${fileNamePrefix}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
 
     const handleSync = async () => {
         setSyncing(true);
@@ -412,29 +456,118 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
         );
     };
 
+    const DynamicServiceModal = ({ isOpen, onClose, apiBaseUrl, onSuccess }) => {
+        const [formData, setFormData] = useState({
+            title: '',
+            summary: '',
+            detailedContent: '',
+            mediaType: 'none',
+        });
+        const [mediaFile, setMediaFile] = useState(null);
+        const [isSubmitting, setIsSubmitting] = useState(false);
+
+        if (!isOpen) return null;
+
+        const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+        const handleFileChange = (e) => {
+            if (e.target.files && e.target.files[0]) {
+                setMediaFile(e.target.files[0]);
+            }
+        };
+
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            setIsSubmitting(true);
+            const data = new FormData();
+            Object.keys(formData).forEach(key => data.append(key, formData[key]));
+            if (mediaFile) data.append('mediaFile', mediaFile);
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/dynamic-services`, {
+                    method: 'POST',
+                    body: data
+                });
+                if (response.ok) {
+                    onSuccess();
+                    onClose();
+                } else {
+                    alert('Failed to create service');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error creating service');
+            } finally {
+                setIsSubmitting(false);
+            }
+        };
+
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-8 animate-scale-up">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-bold text-slate-800">New Dynamic Service/Event</h3>
+                        <button onClick={onClose}><X size={24} className="text-slate-400 hover:text-slate-600" /></button>
+                    </div>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                            <input required name="title" value={formData.title} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Service Title" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Summary (For Ticker)</label>
+                            <textarea required name="summary" value={formData.summary} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" rows="2" placeholder="Short description..." />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Detailed Content</label>
+                            <textarea name="detailedContent" value={formData.detailedContent} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" rows="4" placeholder="Full details (HTML allowed)..." />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Media Type</label>
+                            <select name="mediaType" value={formData.mediaType} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="none">None</option>
+                                <option value="image">Image</option>
+                                <option value="video">Video</option>
+                                <option value="pdf">PDF</option>
+                            </select>
+                        </div>
+                        {formData.mediaType !== 'none' && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Upload File</label>
+                                <input type="file" name="mediaFile" onChange={handleFileChange} className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                            </div>
+                        )}
+                        <button type="submit" disabled={isSubmitting} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50">
+                            {isSubmitting ? 'Creating...' : 'Create Service'}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    };
+
     const handleDelete = async (id, e) => {
         e.stopPropagation();
-        if (window.confirm('Are you sure you want to delete this podcast?')) {
+        if (window.confirm('Are you sure you want to delete this item?')) {
             try {
-                const response = await fetch(`${API_URL}/podcasts/${id}`, {
+                const endpoint = activeTab === 'podcasts' ? '/podcasts' : '/dynamic-services';
+                const response = await fetch(`${API_URL}${endpoint}/${id}`, {
                     method: 'DELETE'
                 });
                 if (response.ok) {
                     setData(data.filter(item => item._id !== id));
-                    // Optional: Show success toast
                 } else {
-                    alert('Failed to delete podcast');
+                    alert('Failed to delete item');
                 }
             } catch (error) {
-                console.error('Error deleting podcast:', error);
-                alert('Error deleting podcast');
+                console.error('Error deleting item:', error);
+                alert('Error deleting item');
             }
         }
     };
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
-            {activeTab !== 'podcasts' && (
+            {activeTab !== 'podcasts' && activeTab !== 'dynamic-services' && (
                 <RegistrationModal
                     isOpen={isModalOpen}
                     selectedWebsite={selectedWebsite}
@@ -442,6 +575,7 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                 />
             )}
             {activeTab === 'podcasts' && <PodcastModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} apiBaseUrl={API_URL} onSuccess={fetchData} />}
+            {activeTab === 'dynamic-services' && <DynamicServiceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} apiBaseUrl={API_URL} onSuccess={fetchData} />}
 
             {/* CSS Animation for Table Rows & Modal */}
             <style>{`
@@ -542,7 +676,7 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                                     <button onClick={() => setSelectedWebinar(null)} className="p-2 -ml-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
                                         <ArrowLeft size={20} />
                                     </button>
-                                    {selectedWebinar === 'SmartMaterials' ? 'Smart Materials 2026' : selectedWebinar}
+                                    {selectedWebinar === 'SmartMaterials' ? 'Smart Materials 2026' : selectedWebinar === 'BuzzWebinar' ? 'Buzz Webinar 2026' : selectedWebinar === 'BioconWebinar' ? 'World Biotech Summit' : selectedWebinar === 'PharmaMeet' ? 'PharmaMeet 2026' : selectedWebinar === 'GenAIConclave' ? 'GenAI Conclave 2026' : selectedWebinar}
                                 </>
                             ) : (
                                 tabs.find(t => t.id === activeTab)?.label
@@ -566,7 +700,7 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                                 className={`flex items-center gap-2 px-4 py-2.5 text-white rounded-xl shadow-lg transition-all active:scale-95 font-medium ${activeTab === 'podcasts' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/30' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'}`}
                             >
                                 <Plus size={18} />
-                                <span>{activeTab === 'podcasts' ? 'New Episode' : 'New Registration'}</span>
+                                <span>{activeTab === 'podcasts' ? 'New Episode' : activeTab === 'dynamic-services' ? 'New Service' : 'New Registration'}</span>
                             </button>
                         )}
 
@@ -580,6 +714,38 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                                 <RefreshCw size={18} className={syncing ? 'animate-spin text-blue-500' : 'text-slate-400'} />
                                 <span>{syncing ? 'Syncing...' : 'Sync Status'}</span>
                             </button>
+                        )}
+
+                        {/* Export Excel Feature (visible only for contact messages tab) */}
+                        {(activeTab === 'contact' || (activeTab === 'webinars' && webinarSubTab === 'contacts' && selectedWebinar)) && (
+                            <div className="flex items-center gap-2 mr-2">
+                                <div className="flex flex-col">
+                                    <label className="text-[10px] text-slate-500 font-semibold mb-0.5 ml-1 uppercase">From Date</label>
+                                    <input 
+                                        type="date" 
+                                        value={fromDate}
+                                        onChange={(e) => setFromDate(e.target.value)}
+                                        className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                    />
+                                </div>
+                                <div className="flex flex-col">
+                                    <label className="text-[10px] text-slate-500 font-semibold mb-0.5 ml-1 uppercase">To Date</label>
+                                    <input 
+                                        type="date" 
+                                        value={toDate}
+                                        onChange={(e) => setToDate(e.target.value)}
+                                        className="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleExportMessagesExcel}
+                                    className="flex items-center gap-2 px-4 py-2 mt-4 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition-all font-medium text-sm"
+                                    title="Export Messages to Excel"
+                                >
+                                    <Download size={16} />
+                                    <span>Export Excel</span>
+                                </button>
+                            </div>
                         )}
 
                         {/* Export Excel Button (visible only for workshops tab) */}
@@ -627,6 +793,62 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                                 <h3 className="text-2xl font-bold text-slate-800 mb-2">Smart Materials 2026</h3>
                                 <p className="text-slate-500 mb-6">Manage all abstract submissions and contact messages for the Smart Materials conference.</p>
                                 <div className="flex items-center text-rose-600 font-semibold group-hover:translate-x-2 transition-transform">
+                                    Manage Webinar <ArrowUpRight className="ml-2" size={20} />
+                                </div>
+                            </div>
+                            
+                            <div 
+                                onClick={() => setSelectedWebinar('BuzzWebinar')}
+                                className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group"
+                            >
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-amber-500/30">
+                                    <Calendar size={32} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-slate-800 mb-2">Buzz Webinar 2026</h3>
+                                <p className="text-slate-500 mb-6">Manage all abstract submissions and contact messages for the Buzz Webinar conference.</p>
+                                <div className="flex items-center text-amber-600 font-semibold group-hover:translate-x-2 transition-transform">
+                                    Manage Webinar <ArrowUpRight className="ml-2" size={20} />
+                                </div>
+                            </div>
+
+                            <div 
+                                onClick={() => setSelectedWebinar('BioconWebinar')}
+                                className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group"
+                            >
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/30">
+                                    <Calendar size={32} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-slate-800 mb-2">World Biotech Summit</h3>
+                                <p className="text-slate-500 mb-6">Manage all abstract submissions and contact messages for the World Biotechnology Summit.</p>
+                                <div className="flex items-center text-emerald-600 font-semibold group-hover:translate-x-2 transition-transform">
+                                    Manage Webinar <ArrowUpRight className="ml-2" size={20} />
+                                </div>
+                            </div>
+
+                            <div 
+                                onClick={() => setSelectedWebinar('PharmaMeet')}
+                                className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group"
+                            >
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/30">
+                                    <Calendar size={32} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-slate-800 mb-2">PharmaMeet 2026</h3>
+                                <p className="text-slate-500 mb-6">Manage all abstract submissions and contact messages for the PharmaMeet conference.</p>
+                                <div className="flex items-center text-blue-600 font-semibold group-hover:translate-x-2 transition-transform">
+                                    Manage Webinar <ArrowUpRight className="ml-2" size={20} />
+                                </div>
+                            </div>
+
+                            <div 
+                                onClick={() => setSelectedWebinar('GenAIConclave')}
+                                className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group"
+                            >
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-cyan-500/30">
+                                    <Calendar size={32} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-slate-800 mb-2">GenAI Conclave 2026</h3>
+                                <p className="text-slate-500 mb-6">Manage all abstract submissions and contact messages for the AI & ML Conclave.</p>
+                                <div className="flex items-center text-cyan-600 font-semibold group-hover:translate-x-2 transition-transform">
                                     Manage Webinar <ArrowUpRight className="ml-2" size={20} />
                                 </div>
                             </div>
@@ -702,16 +924,19 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                                         <th className="px-6 py-5 font-semibold w-16">#</th>
                                         <th className="px-6 py-5 font-semibold">User Profile</th>
                                         <th className="px-6 py-5 font-semibold">Summary</th>
+                                        {selectedWebsite === 'Peptides' && activeTab !== 'payments' && (
+                                            <th className="px-6 py-5 font-semibold">Status</th>
+                                        )}
                                         <th className="px-6 py-5 font-semibold">Date</th>
                                         <th className="px-6 py-5 font-semibold text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {loading && data.length === 0 ? (
-                                        <tr><td colSpan="5" className="p-10 text-center text-slate-400">Loading...</td></tr>
+                                        <tr><td colSpan={selectedWebsite === 'Peptides' && activeTab !== 'payments' ? "6" : "5"} className="p-10 text-center text-slate-400">Loading...</td></tr>
                                     ) : filteredData.length === 0 ? (
                                         <tr>
-                                            <td colSpan="5" className="p-16 text-center">
+                                            <td colSpan={selectedWebsite === 'Peptides' && activeTab !== 'payments' ? "6" : "5"} className="p-16 text-center">
                                                 <div className="flex flex-col items-center">
                                                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                                                         <Search className="text-slate-300 w-10 h-10" />
@@ -787,6 +1012,18 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                                                     </div>
                                                 </td>
 
+                                                {selectedWebsite === 'Peptides' && activeTab !== 'payments' && (
+                                                    <td className="px-6 py-5">
+                                                        {item.payment_status ? (
+                                                            <span className={`text-xs font-bold px-3 py-1 rounded-full w-fit ${item.payment_status === 'Paid' ? 'bg-green-100 text-green-700 border border-green-200' : item.payment_status === 'PendingLink' ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-yellow-100 text-yellow-700 border border-yellow-200'}`}>
+                                                                {item.payment_status}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs text-slate-400 italic">N/A</span>
+                                                        )}
+                                                    </td>
+                                                )}
+
                                                 <td className="px-6 py-5">
                                                     <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
                                                         <Calendar size={14} className="text-slate-400" />
@@ -802,11 +1039,11 @@ export default function Dashboard({ selectedWebsite, onBack, apiBaseUrl }) {
                                                         >
                                                             View Details
                                                         </button>
-                                                        {activeTab === 'podcasts' && (
+                                                        {['podcasts', 'dynamic-services'].includes(activeTab) && (
                                                             <button
                                                                 onClick={(e) => handleDelete(item._id, e)}
                                                                 className="px-3 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 transition-all shadow-sm"
-                                                                title="Delete Podcast"
+                                                                title="Delete Item"
                                                             >
                                                                 <Trash2 size={16} />
                                                             </button>
